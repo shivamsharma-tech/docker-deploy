@@ -2,51 +2,49 @@ pipeline {
     agent any
 
     environment {
-        EC2_USER = 'ubuntu'
-        EC2_HOST = '51.20.98.107'
-        REMOTE_APP_DIR = '/home/ubuntu/myapp'
+        EC2_HOST = '13.51.193.141 '
+        SSH_KEY = credentials('ubuntu')
+        APP_NAME = 'multiapp'
+        IMAGE_NAME = 'node-multi-port'
+        REMOTE_USER = 'ubuntu'
     }
 
     stages {
-        stage('Install Dependencies') {
+        stage('Clone Repo') {
             steps {
-                sh 'npm install'
+                checkout scm
             }
         }
 
-        stage('Deploy to EC2 - Multi-Port') {
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
+        }
+
+        stage('Deploy to EC2 - Multiple Ports') {
             matrix {
                 axes {
                     axis {
                         name 'PORT'
-                        values '3000', '8080'  // Add more ports if needed
+                        values '3000', '8080'
                     }
                 }
 
                 stages {
-                    stage('Copy & Restart on Port') {
+                    stage('Deploy') {
                         steps {
-                            withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu', keyFileVariable: 'SSH_KEY')]) {
-                                sh '''
-                                    echo "Deploying to port $PORT on EC2"
+                            sshagent (credentials: ['ec2-key']) {
+                                sh """
+                                docker save $IMAGE_NAME | bzip2 | ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST 'bunzip2 | docker load'
 
-                                    # Prepare minimal deployment package
-                                    mkdir -p deploy_temp
-                                    cp app.js package*.json deploy_temp/
+                                ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
+                                    docker stop $APP_NAME-\${PORT} || true
+                                    docker rm $APP_NAME-\${PORT} || true
 
-                                    # Copy files to EC2
-                                    scp -o StrictHostKeyChecking=no -i $SSH_KEY -r deploy_temp/* $EC2_USER@$EC2_HOST:$REMOTE_APP_DIR/
-
-                                    # Run remote commands
-                                    ssh -o StrictHostKeyChecking=no -i $SSH_KEY $EC2_USER@$EC2_HOST <<EOF
-                                        cd $REMOTE_APP_DIR
-                                        npm install
-                                        pm2 delete myapp-$PORT || true
-                                        PORT=$PORT pm2 start app.js --name myapp-$PORT
-                                    EOF
-
-                                    rm -rf deploy_temp
-                                '''
+                                    docker run -d --name $APP_NAME-\${PORT} -p \${PORT}:\${PORT} -e PORT=\${PORT} $IMAGE_NAME
+                                EOF
+                                """
                             }
                         }
                     }
@@ -57,10 +55,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment succeeded on all ports!"
+            echo '✅ Deployment successful!'
         }
         failure {
-            echo "❌ Deployment failed. Check logs above."
+            echo '❌ Deployment failed. Check logs.'
         }
     }
 }
