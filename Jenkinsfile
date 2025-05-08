@@ -4,14 +4,14 @@ pipeline {
     environment {
         IMAGE_NAME = "node-multi-port"
         EC2_USER = "ubuntu"
-        EC2_HOST = "your-ec2-ip"
-        SSH_KEY = credentials('ec2-private-key') // Jenkins credential ID
+        EC2_HOST = "13.51.193.141"
+        SSH_KEY = credentials('ubuntu') // Jenkins credential ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/your/repo.git'
+                git 'https://github.com/shivamsharma-tech/docker-deploy'
             }
         }
 
