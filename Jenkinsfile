@@ -9,15 +9,15 @@ pipeline {
         REMOTE_PATH = '/home/ubuntu/' // Replace if needed
     }
 
-stage('Test Docker') {
-  steps {
-    sh 'docker version'
-    sh 'whoami'
-    sh 'ls -l /var/run/docker.sock'
-  }
-}
 
     stages {
+        stage('Test Docker') {
+            steps {
+                sh 'docker version'
+                sh 'whoami'
+                sh 'ls -l /var/run/docker.sock'
+            }
+        }
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/shivamsharma-tech/docker-deploy', branch: 'main'
