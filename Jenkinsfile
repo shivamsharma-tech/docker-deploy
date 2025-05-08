@@ -2,17 +2,16 @@ pipeline {
     agent any
 
     environment {
-        EC2_HOST = '13.51.193.141 '
-        SSH_KEY = credentials('ubuntu')
-        APP_NAME = 'multiapp'
-        IMAGE_NAME = 'node-multi-port'
-        REMOTE_USER = 'ubuntu'
+        IMAGE_NAME = "node-multi-port"
+        EC2_USER = "ubuntu"
+        EC2_HOST = "your-ec2-ip"
+        SSH_KEY = credentials('ec2-private-key') // Jenkins credential ID
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/your/repo.git'
             }
         }
 
@@ -22,40 +21,33 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2 - Multiple Ports') {
-            matrix {
-                axes {
-                    axis {
-                        name 'PORT'
-                        values '3000', '8080'
-                    }
-                }
+        stage('Save Docker Image') {
+            steps {
+                sh 'docker save $IMAGE_NAME > image.tar'
+            }
+        }
 
-                stages {
-                    stage('Deploy') {
-                        steps {
-                            sshagent (credentials: ['ec2-key']) {
-                                sh """
-                                docker save $IMAGE_NAME | bzip2 | ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST 'bunzip2 | docker load'
-
-                                ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
-                                    docker stop $APP_NAME-\${PORT} || true
-                                    docker rm $APP_NAME-\${PORT} || true
-
-                                    docker run -d --name $APP_NAME-\${PORT} -p \${PORT}:\${PORT} -e PORT=\${PORT} $IMAGE_NAME
-                                EOF
-                                """
-                            }
-                        }
-                    }
-                }
+        stage('Deploy to EC2') {
+            steps {
+                sh '''
+                    scp -i $SSH_KEY image.tar $EC2_USER@$EC2_HOST:/home/ubuntu/
+                    ssh -i $SSH_KEY $EC2_USER@$EC2_HOST '
+                      docker load < image.tar &&
+                      docker stop app3000 || true &&
+                      docker stop app8080 || true &&
+                      docker rm app3000 || true &&
+                      docker rm app8080 || true &&
+                      docker run -d -p 3000:3000 --name app3000 -e PORT=3000 $IMAGE_NAME &&
+                      docker run -d -p 8080:8080 --name app8080 -e PORT=8080 $IMAGE_NAME
+                    '
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo '✅ Deployment successful!'
+        always {
+            echo '✅ Pipeline finished.'
         }
         failure {
             echo '❌ Deployment failed. Check logs.'
