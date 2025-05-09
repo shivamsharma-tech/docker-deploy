@@ -2,61 +2,57 @@ pipeline {
     agent any
 
     environment {
-        // Docker Hub credentials (you should have them configured in Jenkins)
-        DOCKER_CREDENTIALS = 'Docker' // Docker Hub credentials ID from Jenkins Credentials Manager
-        DOCKER_IMAGE = 'shivamsharam/docker-test'    // Name of the Docker image in Docker Hub
+        DOCKER_CREDENTIALS = 'Docker' // Jenkins credential ID for Docker Hub
+        DOCKER_IMAGE = 'shivamsharam/docker-test' // Docker image name
+        EC2_CREDENTIALS = 'ubunntu' // Jenkins credential ID for EC2 private key
+        EC2_USER = 'ubuntu' // or 'ubuntu' depending on your AMI
+        EC2_IP = '13.51.193.141' // Replace with your EC2 instance public IP
     }
 
     stages {
         stage('Test Docker Access') {
             steps {
-                script {
-                    // Check if Docker is accessible from Jenkins
-                    sh 'docker ps'
-                }
+                sh 'docker ps'
             }
         }
+
         stage('Checkout SCM') {
             steps {
-                // Checkout your project from GitHub (or any other Git repository)
-                git url: 'https://github.com/shivamsharma-tech/docker-deploy.git', branch: 'main'
+                git url: 'https://github.com/shivamsharma-tech/docker-deploy', branch: 'main'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    // Build the Docker image from the Dockerfile
-                    sh 'docker build -t $DOCKER_IMAGE .'
-                }
+                sh 'docker build -t $DOCKER_IMAGE .'
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
-                script {
-                    // Login to Docker Hub using the configured Jenkins credentials
-                    withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS", usernameVariable: 'shivamsharam', passwordVariable: 'Shivamsharma')]) {
-                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
-                    }
+                withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS", usernameVariable: 'shivamsharam', passwordVariable: 'Shivamsharma')]) {
+                    sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
                 }
             }
         }
 
         stage('Push Docker Image to Docker Hub') {
             steps {
-                script {
-                    // Push the Docker image to Docker Hub
-                    sh 'docker push $DOCKER_IMAGE'
-                }
+                sh 'docker push $DOCKER_IMAGE'
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Deploy to AWS EC2') {
             steps {
-                script {
-                    // Run the Docker container, exposing ports 4000 and 5000
-                    sh 'docker run -d -p 4000:4000 -p 5000:5000 $DOCKER_IMAGE'
+                sshagent(credentials: ["$EC2_CREDENTIALS"]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_IP '
+                            docker pull $DOCKER_IMAGE &&
+                            docker stop docker-test || true &&
+                            docker rm docker-test || true &&
+                            docker run -d --name docker-test -p 4000:4000 -p 5000:5000 $DOCKER_IMAGE
+                        '
+                    """
                 }
             }
         }
@@ -64,10 +60,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment successful!'
+            echo '✅ Deployment successful!'
         }
         failure {
-            echo 'Deployment failed!'
+            echo '❌ Deployment failed. Check logs.'
         }
     }
 }
