@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS = credentials('Docker-access')  // Jenkins credential ID for Docker Hub
         DOCKER_IMAGE = 'shivamsharam/docker-test' // Docker image name
-        EC2_CREDENTIALS = 'ubunntu' // Jenkins credential ID for EC2 private key
+        EC2_CREDENTIALS = 'ubuntu' // Jenkins credential ID for EC2 private key
         EC2_USER = 'ubuntu' // or 'ubuntu' depending on your AMI
         EC2_IP = '13.51.193.141' // Replace with your EC2 instance public IP
     }
