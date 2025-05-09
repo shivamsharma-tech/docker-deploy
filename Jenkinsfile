@@ -2,65 +2,53 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'node-multi-port'
-        TAR_NAME = "${IMAGE_NAME}.tar"
-        REMOTE_USER = 'ubuntu' // Replace with your remote user
-        REMOTE_HOST = '13.51.193.141' // Replace with your EC2 IP
-        REMOTE_PATH = '/home/ubuntu/' // Replace if needed
+        // Docker Hub credentials (you should have them configured in Jenkins)
+        DOCKER_CREDENTIALS = 'Docker' // Docker Hub credentials ID from Jenkins Credentials Manager
+        DOCKER_IMAGE = 'shivamsharam/docker-test'    // Name of the Docker image in Docker Hub
     }
 
-
     stages {
-        stage('Test Docker') {
+        stage('Checkout SCM') {
             steps {
-                sh 'docker version'
-                sh 'whoami'
-                sh 'ls -l /var/run/docker.sock'
-            }
-        }
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/shivamsharma-tech/docker-deploy', branch: 'main'
+                // Checkout your project from GitHub (or any other Git repository)
+                git 'https://github.com/shivamsharma-tech/docker-deploy.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                // script {
-                    sh "docker build -t ${IMAGE_NAME} ."
-                // }
+                script {
+                    // Build the Docker image from the Dockerfile
+                    sh 'docker build -t $DOCKER_IMAGE .'
+                }
             }
         }
 
-        stage('Save Docker Image') {
+        stage('Login to Docker Hub') {
             steps {
                 script {
-                    sh "docker save -o ${TAR_NAME} ${IMAGE_NAME}"
+                    // Login to Docker Hub
+                    withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
+                    }
                 }
             }
         }
 
-        stage('Copy to EC2') {
+        stage('Push Docker Image to Docker Hub') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'your-ssh-creds-id', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
-                        scp -o StrictHostKeyChecking=no -i $SSH_KEY ${TAR_NAME} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}
-                    """
+                script {
+                    // Push the Docker image to Docker Hub
+                    sh 'docker push $DOCKER_IMAGE'
                 }
             }
         }
 
-        stage('Deploy on EC2') {
+        stage('Run Docker Container') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'your-ssh-creds-id', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -i $SSH_KEY ${REMOTE_USER}@${REMOTE_HOST} << EOF
-                        docker load -i ${REMOTE_PATH}${TAR_NAME}
-                        docker stop ${IMAGE_NAME} || true
-                        docker rm ${IMAGE_NAME} || true
-                        docker run -d --name ${IMAGE_NAME} -p 3000:3000 ${IMAGE_NAME}
-                        EOF
-                    """
+                script {
+                    // Run the Docker container, exposing ports 4000 and 5000
+                    sh 'docker run -d -p 4000:4000 -p 5000:5000 $DOCKER_IMAGE'
                 }
             }
         }
@@ -68,10 +56,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Deployment succeeded.'
+            echo 'Deployment successful!'
         }
         failure {
-            echo '❌ Deployment failed. Check logs.'
+            echo 'Deployment failed!'
         }
     }
 }
