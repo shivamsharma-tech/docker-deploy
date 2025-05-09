@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDENTIALS = credentials('Docker')  // Jenkins credential ID for Docker Hub
+        DOCKER_CREDENTIALS = credentials('Docker-access')  // Jenkins credential ID for Docker Hub
         DOCKER_IMAGE = 'shivamsharam/docker-test' // Docker image name
         EC2_CREDENTIALS = 'ubunntu' // Jenkins credential ID for EC2 private key
         EC2_USER = 'ubuntu' // or 'ubuntu' depending on your AMI
@@ -30,7 +30,7 @@ pipeline {
 
         stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "Docker", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: "Docker-access", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
                 }
             }
