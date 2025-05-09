@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDENTIALS = credentials('shivamsharam:Shivamsharma')  // Jenkins credential ID for Docker Hub
+        DOCKER_CREDENTIALS = credentials('Docker')  // Jenkins credential ID for Docker Hub
         DOCKER_IMAGE = 'shivamsharam/docker-test' // Docker image name
         EC2_CREDENTIALS = 'ubunntu' // Jenkins credential ID for EC2 private key
         EC2_USER = 'ubuntu' // or 'ubuntu' depending on your AMI
