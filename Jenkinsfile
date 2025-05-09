@@ -56,6 +56,11 @@ ssh -o StrictHostKeyChecking=no ubuntu@13.51.193.141 "
                 }
             }
         }
+        stage('Run Docker Container') {
+    steps {
+        sh 'docker run -d -p 4000:4000 --name docker-test shivamsharam/docker-test'
+    }
+}
     }
 
     post {
