@@ -45,14 +45,14 @@ pipeline {
         stage('Deploy to AWS EC2') {
             steps {
                 sshagent(credentials: ["$EC2_CREDENTIALS"]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_IP '
-                            docker pull $DOCKER_IMAGE &&
-                            docker stop docker-test || true &&
-                            docker rm docker-test || true &&
-                            docker run -d --name docker-test -p 4000:4000 -p 5000:5000 $DOCKER_IMAGE
-                        '
-                    """
+                    sh '''
+ssh -o StrictHostKeyChecking=no ubuntu@13.51.193.141 "
+    sudo docker pull shivamsharam/docker-test &&
+    sudo docker stop docker-test || true &&
+    sudo docker rm docker-test || true &&
+    sudo docker run -d --name docker-test -p 4000:4000 -p 5000:5000 shivamsharam/docker-test
+"
+'''
                 }
             }
         }
