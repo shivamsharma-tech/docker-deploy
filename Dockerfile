@@ -1,5 +1,5 @@
 # Step 1: Define the base image to use
-FROM node:14
+FROM node:18
 
 # Step 2: Set the working directory inside the container
 WORKDIR /usr/src/app
