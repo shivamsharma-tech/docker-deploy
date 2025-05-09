@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout SCM') {
             steps {
                 // Checkout your project from GitHub (or any other Git repository)
-                git 'https://github.com/shivamsharma-tech/docker-deploy.git'
+                git url:'https://github.com/shivamsharma-tech/docker-deploy.git', branch:"main"
             }
         }
 
