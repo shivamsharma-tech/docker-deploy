@@ -8,6 +8,14 @@ pipeline {
     }
 
     stages {
+        stage('Test Docker Access') {
+            steps {
+                script {
+                    // Check if Docker is accessible from Jenkins
+                    sh 'docker ps'
+                }
+            }
+        }
         stage('Checkout SCM') {
             steps {
                 // Checkout your project from GitHub (or any other Git repository)
