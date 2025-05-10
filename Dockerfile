@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 4000 5000 
 
 # Step 7: Define the command to run the app
-CMD ["npm", "start"]
+CMD ["sh", "-c", "node index.js & PORT=5000 node index.js && wait"]

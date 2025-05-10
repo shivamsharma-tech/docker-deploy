@@ -50,7 +50,7 @@ ssh -o StrictHostKeyChecking=no ubuntu@13.51.193.141 "
     sudo docker pull shivamsharam/docker-test:latest &&
     sudo docker stop docker-test:latest || true &&
     sudo docker rm docker-test:latest || true &&
-    sudo docker run -d --name docker-test -p 4000:4000 -p 5000:5000 shivamsharam/docker-test:latest
+    sudo docker run -d --name docker-test -p 4000:4000 -p 5000:5000 -e PORTS=4000,5000 shivamsharam/docker-test:latest
 "
 '''
                 }
